@@ -1,0 +1,15 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "DefaultEndpointsProtocol=https;AccountName=rerelasefunctioaee1;AccountKey=5ZvdKKdm1UGbSxxYLqPggjAZuVsIr10HKWHWJJpodLRYp8y4vLiM/6ZuJvu7ZSr9ytWJ6hCaNZbRtxFXUxChPg==",
+    "distrauto_STORAGE": "DefaultEndpointsProtocol=https;AccountName=distrauto;AccountKey=nMDJlvCvSBqa4+wTrdFxECK13uHgNlrEVd+mRH2xpiLvShQ6B5oYecLlNIySwRvZn2JaZfjfYfsQCydBqV3q7g==",
+    "AzureWebJobsDashboard": "DefaultEndpointsProtocol=https;AccountName=rerelasefunctioaee1;AccountKey=5ZvdKKdm1UGbSxxYLqPggjAZuVsIr10HKWHWJJpodLRYp8y4vLiM/6ZuJvu7ZSr9ytWJ6hCaNZbRtxFXUxChPg==",
+    "FUNCTIONS_EXTENSION_VERSION": "~1",
+    "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING": "DefaultEndpointsProtocol=https;AccountName=rerelasefunctioaee1;AccountKey=5ZvdKKdm1UGbSxxYLqPggjAZuVsIr10HKWHWJJpodLRYp8y4vLiM/6ZuJvu7ZSr9ytWJ6hCaNZbRtxFXUxChPg==",
+    "WEBSITE_CONTENTSHARE": "rerelasefunctionaee1",
+    "WEBSITE_NODE_DEFAULT_VERSION": "6.5.0",
+    "AzureWebJobsSecretStorageType": "disabled",
+    "APP_CENTER_TOKEN": "7cf63c7f6f3d9b1ce7bf6ca53ed670aded0b7aca"
+  },
+  "ConnectionStrings": {}
+}

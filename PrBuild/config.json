@@ -1,0 +1,7 @@
+[  
+    {      
+        "template_branch": "pr-config",
+        "skip_regex": "(skip|no-build)",
+    }
+ ]
+ 
