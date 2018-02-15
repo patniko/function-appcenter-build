@@ -9,7 +9,8 @@
     "WEBSITE_CONTENTSHARE": "rerelasefunctionaee1",
     "WEBSITE_NODE_DEFAULT_VERSION": "6.5.0",
     "AzureWebJobsSecretStorageType": "disabled",
-    "APP_CENTER_TOKEN": "7cf63c7f6f3d9b1ce7bf6ca53ed670aded0b7aca"
+    "APP_CENTER_TOKEN": "",
+    "GITHUB_TOKEN": ""
   },
   "ConnectionStrings": {}
 }

@@ -1,192 +1,97 @@
+var request = require('request-promise');
+var _ = require('lodash');
+
 module.exports = function (context, req) {
-    context.log('JavaScript HTTP trigger function processed a request.');
+    context.log('Processing webhook request.');
 
     if (req.body && req.body.action) {
-        var action = req.body.action;
-        var branch = req.body.pull_request.head.ref;
-        var target_branch = req.body.pull_request.base.ref;
+        const action = req.body.action;
+        const head_repo = req.body.pull_request.head.repo.full_name;
+        const branch = req.body.pull_request.head.ref;
+        const sha = req.body.pull_request.head.sha;
+        const target_branch = req.body.pull_request.base.ref;
+        const pull_request = req.body.pull_request.id;
         
-        context.res = {
-            // status: 200, /* Defaults to 200 */
-            body: `PR was ${action} on ${branch} trying to merge into ${target_branch}...`
-        };
+        const appcenter_token = process.env["APP_CENTER_TOKEN"];
+        const github_token = process.env["GITHUB_TOKEN"];
+        const config = require('./config.json');
+        const { repo_owner, repo_name, appcenter_owner, appcenter_app, branch_template, branch_regex, appcenter_owner_type } = config;
+
+        const repo_path = `${repo_owner}/${repo_name}`;
+
+        let message = "";
+
+        if(head_repo == repo_path) {
+
+            if(action === "opened" || action === "synchronize") {
+                context.log(`PR #${pull_request} was ${action} on '${branch}' trying to merge into '${target_branch}'...`);
+                GetBuildConfiguration(branch, appcenter_token, appcenter_owner, appcenter_app)
+                .then(branch_config => {
+                    if(!branch_config) {
+                        GetBuildConfiguration(branch_template, appcenter_token, appcenter_owner, appcenter_app)
+                        .then(branch_config => {
+                            CreatePrBuildConfiguration(branch_config, branch, appcenter_token, appcenter_owner, appcenter_app)
+                            .then(() => {
+                                StartPrBuild(branch, sha, appcenter_token, appcenter_owner, appcenter_app, appcenter_owner, appcenter_owner_type, appcenter_app)
+                                .then(() => {
+                                    ReportGithubStatus(repo_path, branch, sha, github_token)
+                                    .then(response => {
+                                        context.log(response);
+                                        context.res = {
+                                            body: `Started PR build for ${action} on new configuration...`
+                                        };
+                                        context.done();
+                                    });
+                                });
+                            })
+                        });
+                    } else {
+                        StartPrBuild(branch, sha, appcenter_token, appcenter_owner, appcenter_app)
+                        .then(() => {
+                            ReportGithubStatus(repo_path, branch, sha, github_token, appcenter_owner, appcenter_owner_type, appcenter_app)
+                            .then(response => {
+                                context.log(response);
+                                context.res = {
+                                    body: `Started PR build for ${action} on existing configuration...`
+                                };
+                                context.done();
+                            });
+                        });
+                    }
+                });
+            } else if(action === "closed") {
+                context.log(`PR closed, deleting build configuration for ${branch}.`);
+                DeletePrBuildConfiguration(branch, appcenter_token, appcenter_owner, appcenter_app)
+                .then(branch_config => {
+                    context.res = {
+                        body: `${branch} has been removed.`
+                    };
+                    context.done();
+                });
+            } else {
+                context.log(`Unsupported action detected.`);
+                context.res = {
+                    body: `${action} is an unsupported action. Ignored.`
+                };
+                context.done();
+            }
+        } else {
+            context.res = {
+                body: `Configuration is for ${repo_path}, but this webhook was triggered by ${head_repo}. Ignored.`
+            };
+            context.done();
+        }
     }
     else {
         context.res = {
             status: 400,
-            body: "Please pass a name on the query string or in the request body"
+            body: "Please post a valid webhook payload."
         };
-    }
-    context.done();
-};
 
-function checkPR() {
-
-
-
-    // PR New or Ammended?
-
-    // If new
-    // Pull config from template branch
-    // Apply to new branch
-
-    // If old
-    // Check for 
-
-}
-
-
-
-
-
-
-
-
-/*
-var request = require('request-promise');
-
-module.exports = function (context, rereleaseTimer) {
-
-    const token = process.env["APP_CENTER_TOKEN"];
-    const rules = require('./config.json');
-
-    const ruleSet = [];
-    for(rule of rules) 
-    {
-        ruleSet.push(new Promise((resolve, reject) => {
-
-            const owner = rule.owner;
-            const app = rule.app;
-            const source = rule.source;
-            const destination = rule.destination;
-
-            context.log(`Processing rule for ${app} (${source} -> ${destination})...`);
-
-            var options = BuildUrl("/recent_releases", token, owner, app);
-            return request(options) 
-            .then(response => {
-                var releases = JSON.parse(response);
-                let release = GetLatest(releases, source);
-
-                if(release) {
-
-                    if(!IsInGroup(release, destination))
-                    {
-                        context.log(`Checking stats for version ${release.short_version} (${release.id})...`);
-                        
-                        var crashes = new Promise((resolve, reject) => {
-                            var options = BuildUrl(`/analytics/crash_counts?start=${release.uploaded_at}&versions=${release.short_version}`, token, owner, app);
-                            request(options)
-                            .then(results => {
-                                results = JSON.parse(results);
-                                if(results.count) {
-                                    resolve(results.count);
-                                } else
-                                    resolve(0);
-                            })
-                            .error(response => {
-                                context.error(response);
-                                reject(response);
-                            });
-                        }); 
-                
-                        var sessions = new Promise((resolve, reject) => {
-                            var options = BuildUrl(`/analytics/session_durations_distribution?start=${release.uploaded_at}&versions=${release.short_version}`, token, owner, app);
-                            request(options)
-                            .then(results => {
-                                results = JSON.parse(results);
-                                if(results.distribution && results.distribution[2]) {
-                                    resolve(results.distribution[2].count);
-                                } else
-                                    resolve(0);
-                            })
-                            .error(response => {
-                                context.error(response);
-                                reject(response);
-                            });
-                        }); 
-                
-                        var installs = new Promise((resolve, reject) => {
-                            var options = BuildUrl(`/analytics/versions?start=${release.uploaded_at}&versions=${release.short_version}`, token, owner, app);
-                            request(options)
-                            .then(results => {
-                                results = JSON.parse(results);
-                                if (results.versions && results.versions[0]) {
-                                    resolve(results.versions[0].count);
-                                } else
-                                    resolve(0);
-                            })
-                            .error(response => {
-                                context.error(response);
-                                reject(response);
-                            });
-                        }); 
-            
-                        Promise.all([crashes, sessions, installs ])
-                        .then(values => { 
-                            let [ crashes, sessions, installs ] = [ ...values ];
-
-                            context.log(`Crashes Detected: ${crashes}`);
-                            context.log(`Sessions (1-30min): ${sessions}`);
-                            context.log(`Total Installs: ${installs}`);
-
-                            if (crashes <= rule.crashes && installs >= rule.installs && sessions >= rule.sessions) {
-                                context.log(`Re-releasing latest version...`);
-
-                                return GetDestination(token, owner, app, rule)
-                                .then(group => {
-                                    if(group) {
-                                        return GetRelease(token, owner, app, release.id)
-                                        .then(release => {
-                                            if(release) {
-                                                const patch = {
-                                                    destinations: [{ id: group.id, name: group.name }],
-                                                    mandatory_update: release.mandatory_update,
-                                                    release_notes: release.release_notes
-                                                };
-                                                PatchRelease(token, owner, app, release.id, patch)
-                                                .then((release) => {
-                                                    resolve()
-                                                })
-                                                .error(response => {
-                                                    context.error(response);
-                                                    reject(response);
-                                                });
-                                            }
-                                        });
-
-                                        resolve(true);
-                                    } else {
-                                        reject("Could not lookup destination for re-release.");
-                                    }
-                                });
-                            } else {
-                                context.log(`Nothing to perform.`);
-                                resolve(false);
-                            }
-                        });
-                    } else {
-                        context.log(`Latest release (${release.short_version}) has already been distributed to the destination.`);
-                        resolve(false);
-                    }
-                } else {
-                    context.log("No releases available in source.");
-                    resolve(false);
-                }
-            })
-            .error(response => {
-                reject(error);
-                context.error(response);
-            });
-        }));
-    }
-
-    Promise.all(ruleSet)
-    .then(values => {
-        context.log("Finished processing!");
         context.done();
-    });
+    }
 };
+
 
 function BuildUrl(endpoint, token, owner, app) {
     const options = {
@@ -196,25 +101,8 @@ function BuildUrl(endpoint, token, owner, app) {
     return options;
 }
 
-function GetLatest(releases, group) {
-    for(z = 0; z < releases.length; z++) {
-        if(IsInGroup(releases[z], group)) {
-            return releases[z];
-        }
-    }
-}
-
-function IsInGroup(release, group) {
-    if(release.distribution_groups) {
-        for(i = 0; i < release.distribution_groups.length; i++) {
-            if(release.distribution_groups[i].name == group)
-                return true;
-        }
-    }
-    return false;
-}
-
-function FindOne(endpoint, token, owner, app) {
+function GetBuildConfiguration(branch, token, owner, app) {
+    const endpoint = `/branches/${branch}/config`;
     var options = BuildUrl(endpoint, token, owner, app);
     return request(options)
     .then(result => {
@@ -223,27 +111,65 @@ function FindOne(endpoint, token, owner, app) {
             return result;
         }
     })
+    .catch(error => {
+        return null;
+    });
 }
 
-function GetDestination(token, owner, app, rule) {
-    switch(rule.type) {
-        case "store":
-            return FindOne(`/distribution_stores/${rule.destination}`, token, owner, app);
-        default:
-            return FindOne(`/distribution_groups/${rule.destination}`, token, owner, app);
-    }
+function CreatePrBuildConfiguration(config, branch, token, owner, app) {
+    // Disable distribute on build and change name over to new branch
+    config.toolsets.distribution = {};
+    config.branch.name = branch;
+    config.trigger = "continuous";
+
+    const options = BuildUrl(`/branches/${branch}/config`, token, owner, app);
+    Object.assign(options, { method: "POST", body: JSON.stringify(config) })
+    return request(options)
+    .then((result) => {
+        return result;
+    });
 }
 
-function GetRelease(token, owner, app, release) {
-    return FindOne(`/releases/${release}`, token, owner, app);
+function StartPrBuild(branch, sha, token, owner, app) {
+    const payload = { sourceVersion: sha }
+
+    const options = BuildUrl(`/branches/${branch}/builds`, token, owner, app);
+    Object.assign(options, { method: "POST", body: JSON.stringify(payload) })
+    return request(options)
+    .then((result) => {
+        return result;
+    });
 }
 
-function PatchRelease(token, owner, app, id, release) {
-    const options = BuildUrl(`/releases/${id}`, token, owner, app);
-    Object.assign(options, { method: "PATCH", body: JSON.stringify(release) })
+function DeletePrBuildConfiguration(branch, token, owner, app) {
+    const options = BuildUrl(`/branches/${branch}/config`, token, owner, app);
+    Object.assign(options, { method: "DELETE" })
     return request(options)
     .then((result) => {
         return result;
     })
 }
-*/
+
+function ReportGithubStatus(repo_path, branch, sha, token, owner, owner_type, app) {
+    const options = {
+        headers: { 'Accept': 'application/json', 'User-Agent': 'appcenter-ci', 'Content-Type': 'application/json', 'Authorization': `token ${token}` },
+        url: `https://api.github.com/repos/${repo_path}/statuses/${sha}`
+    };
+
+    var report = {
+        state: "pending",
+        target_url: `https://appcenter.ms/${owner_type}/${owner}/apps/${app}/build/branches/${branch}`,
+        description: "Running build in App Center...",
+        context: "continuous-integration/appcenter"
+    };
+
+    Object.assign(options, { method: "POST", body: JSON.stringify(report) })
+
+    return request(options)
+    .then((result) => {
+        return result;
+    })
+    .catch(error => {
+
+    });
+}
