@@ -1,13 +1,15 @@
 module.exports = function (context, req) {
     context.log('JavaScript HTTP trigger function processed a request.');
 
-    if (req.query.name || (req.body && req.body.name)) {
+    if (req.body && req.body.action) {
+        var action = req.body.action;
+        var branch = req.body.pull_request.head.ref;
+        var target_branch = req.body.pull_request.base.ref;
+        
         context.res = {
             // status: 200, /* Defaults to 200 */
-            body: "Hello " + (req.query.name || req.body.name)
+            body: `PR was ${action} on ${branch} trying to merge into ${target_branch}...`
         };
-
-
     }
     else {
         context.res = {
