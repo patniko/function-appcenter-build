@@ -20,7 +20,6 @@
   },
   "homepage": "https://github.com/Microsoft/auto-distribution-function#readme",
   "dependencies": {
-    "lodash": "^4.17.5",
     "request": "^2.83.0",
     "request-promise": "^4.2.2"
   }
