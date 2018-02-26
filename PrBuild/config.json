@@ -1,12 +1,14 @@
-{      
-    "repo_owner": "pniko",
-    "repo_name": "detox-appcenter",
-
-    "appcenter_owner_type": "users",
-    "appcenter_owner": "pniko",
-    "appcenter_app": "detox-appcenter",
-
-    "branch_template": "master",
-    "branch_regex": "(skip|no-build)"
+{
+    "repos": [
+        {
+            "provider": "github",
+            "repo_owner": "pniko",
+            "repo_name": "detox-appcenter",
+            "branch_template": "master",
+            "appcenter_owner_type": "users",
+            "appcenter_owner": "pniko",
+            "appcenter_app": "detox-appcenter"
+        }
+    ]      
 }
  
